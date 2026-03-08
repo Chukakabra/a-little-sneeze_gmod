@@ -1,0 +1,7 @@
+"AddonInfo"
+{
+	"name" "a little sneeze"
+	"author_name" "Chukakabra"
+	"author_url" "tg@transit_decepticon"
+	"info" "Just a harmless little sneeze-action."
+}
