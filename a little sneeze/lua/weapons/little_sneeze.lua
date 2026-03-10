@@ -1,3 +1,4 @@
+-- SWEP structure
 SWEP.PrintName = "a little sneeze"
 SWEP.Author = "Chukakabra"
 SWEP.Category = "Other"
@@ -16,8 +17,8 @@ SWEP.UseHands = "false"
 SWEP.ViewModel = ""
 SWEP.WorldModel = ""
 
-SWEP.Primary.ClipSize		= -1
-SWEP.Primary.DefaultClip	= -1
+SWEP.Primary.ClipSize		= 1
+SWEP.Primary.DefaultClip	= 1
 SWEP.Primary.Automatic		= false
 SWEP.Primary.Ammo		= "none"
 SWEP.Primary.Delay = 3.0
@@ -27,6 +28,7 @@ SWEP.Secondary.DefaultClip	= -1
 SWEP.Secondary.Automatic	= false
 SWEP.Secondary.Ammo		= "none"
 
+-- SWEP icon setting
 if CLIENT then
     local textureID = surface.GetTextureID( "weapons/weaponIcon_sneeze" )
     function SWEP:DrawWeaponSelection( x, y, wide, tall, alpha )
@@ -50,17 +52,24 @@ function SWEP:Deploy()
     return true
 end
 
+
+-- Primary attack logic
 function SWEP:PrimaryAttack()
     local owner = self:GetOwner()
     
+    -- Admin check
     if GetConVar("admin_only"):GetInt() == 1 and not owner:IsAdmin() then
         if SERVER then
             owner:ChatPrint("The server admin prohibited using this SWEP for non-admins.")
             return
         end
     end
-    
+
+    -- Reload
     self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
+    timer.Simple(self.Primary.Delay, function()
+        self:SetClip1(1)
+    end)
     
     if SERVER then
         local forceCvar = (GetConVar("sneeze_force")):GetFloat()
@@ -70,7 +79,7 @@ function SWEP:PrimaryAttack()
         
         owner:EmitSound("sneeze.wav", 75, 100, 1, CHAN_AUTO)
         timer.Simple(0.30, function()
-            if not IsValid(self) and not IsValid(owner) then return end
+            if not IsValid(self) or not IsValid(owner) then return end
             
             local start_pos = owner:GetShootPos()
             local direction = owner:GetAimVector()
@@ -80,13 +89,15 @@ function SWEP:PrimaryAttack()
             
             if entities and #entities > 0 then
                 for _, ent in ipairs(entities) do
+                    print(ent)
                     if IsValid(ent) and ent != owner and not ent:IsPlayer() and ent:GetClass() != "worldspawn" then
+                        local hasPhysics
                         
                         local distance = ent:GetPos():Distance(start_pos)
                         local force = forceCvar * (300 / math.max(distance, 10))
                         
                         -- Non-prop entity physics + damage local function
-                        local function ImplementPhysics(finalDamage)
+                        local function ImplementPhysics(finalDamage, hasPhysics)
                             local dmgReg = DamageInfo()
                             
                             local vertical_ratio = math.abs(direction.z)
@@ -114,7 +125,7 @@ function SWEP:PrimaryAttack()
                         end
                         
                         -- Physics for props
-                        if ent:GetPhysicsObject():IsValid() then
+                        if hasPhysics and not ent:IsNPC() then
                             local physics = ent:GetPhysicsObject()
                             physics:ApplyForceCenter(direction * force)
                             physics:ApplyForceOffset(direction * force * 0.5, ent:GetPos() + Vector(0,0,10))
@@ -132,6 +143,7 @@ function SWEP:PrimaryAttack()
                     end
                 end
             end
+            self:TakePrimaryAmmo(1)
         end)
     end
 end
